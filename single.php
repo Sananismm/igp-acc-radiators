@@ -1,0 +1,1 @@
+<?php get_header(); ?><div class="page shell prose-page"><?php while ( have_posts() ) : the_post(); ?><article><h1><?php the_title(); ?></h1><?php the_post_thumbnail( 'large' ); the_content(); ?></article><?php endwhile; ?></div><?php get_footer(); ?>
