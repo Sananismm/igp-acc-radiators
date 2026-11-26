@@ -2,7 +2,7 @@
 /**
  * Plugin Name: IGP Unified Core
  * Description: Catalogue and enquiry data types for Innovative Generator Parts.
- * Version: 2.1.0
+ * Version: 2.1.1
  * Requires PHP: 8.1
  */
 if ( ! defined( 'ABSPATH' ) ) { exit; }
@@ -25,6 +25,7 @@ define( 'IGP_CORE_DIR', plugin_dir_path( __FILE__ ) );
 define( 'IGP_CORE_URI', plugin_dir_url( __FILE__ ) );
 require_once IGP_CORE_DIR . 'inc/catalogue.php';
 require_once IGP_CORE_DIR . 'inc/settings.php';
+require_once IGP_CORE_DIR . 'inc/smtp.php';
 require_once IGP_CORE_DIR . 'inc/private-storage.php';
 require_once IGP_CORE_DIR . 'inc/enquiries.php';
 require_once IGP_CORE_DIR . 'inc/divisions.php';

@@ -20,5 +20,5 @@ function igp_core_settings_page() {
 	foreach ( array( 'company' => 'Company name', 'phone' => 'Public phone', 'whatsapp' => 'WhatsApp international digits', 'email' => 'Public email', 'service_area' => 'Service area', 'address' => 'Public address', 'notification_email' => 'Enquiry notification email' ) as $key => $label ) {
 		echo '<tr><th><label for="igp_' . esc_attr( $key ) . '">' . esc_html( $label ) . '</label></th><td><input class="regular-text" id="igp_' . esc_attr( $key ) . '" name="igp_core_settings[' . esc_attr( $key ) . ']" value="' . esc_attr( $settings[ $key ] ) . '"></td></tr>';
 	}
-	echo '</table><p>Configure authenticated SMTP separately. Leave the notification address blank to disable notification emails.</p>'; submit_button(); echo '</form></div>';
+	echo '</table><p>Authenticated SMTP is configured on the server. Leave the notification address blank to disable notification emails.</p>'; submit_button(); echo '</form></div>';
 }
