@@ -189,9 +189,11 @@ lint_staged() {
   [[ ! -e "$STAGE_DIR/plugin/.git" ]] || die "Staged plugin contains Git metadata"
 
   if command -v php >/dev/null 2>&1; then
+    local php_list="$STAGE_DIR/php-files.list"
+    find "$STAGE_DIR" -type f -name '*.php' -print0 > "$php_list" || die "Unable to list staged PHP files"
     while IFS= read -r -d '' file; do
       php -l "$file" >/dev/null || die "PHP syntax error in $file"
-    done < <(find "$STAGE_DIR" -type f -name '*.php' -print0)
+    done < "$php_list"
   else
     warn "php CLI unavailable; PHP syntax was not linted"
   fi
