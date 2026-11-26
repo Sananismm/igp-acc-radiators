@@ -1,0 +1,103 @@
+name: Validate and deploy to cPanel
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cpanel-deployment
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: Validate deployment configuration
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Validate YAML files
+        run: |
+          python -m pip install --quiet PyYAML
+          python - <<'PY'
+          from pathlib import Path
+          import yaml
+
+          cpanel = yaml.safe_load(Path('.cpanel.yml').read_text(encoding='utf-8'))
+          expected = {'deployment': {'tasks': ['/bin/bash ./deploy/cpanel-deploy.sh --deploy']}}
+          if cpanel != expected:
+              raise SystemExit(f'Unexpected .cpanel.yml structure: {cpanel!r}')
+
+          workflow = yaml.safe_load(Path('.github/workflows/deployment.yml').read_text(encoding='utf-8'))
+          if not isinstance(workflow, dict) or 'jobs' not in workflow:
+              raise SystemExit('Workflow YAML is invalid')
+          print('YAML validation passed')
+          PY
+
+      - name: Check deployment script syntax
+        run: bash -n deploy/cpanel-deploy.sh
+
+      - name: Run offline deployment check
+        run: bash deploy/cpanel-deploy.sh --check
+
+  deploy:
+    name: Deploy to cPanel
+    needs: validate
+    if: github.ref == 'refs/heads/main' && vars.IGP_CICD_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Prepare SSH key
+        env:
+          CPANEL_SSH_KEY: ${{ secrets.CPANEL_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$CPANEL_SSH_KEY" ]]; then
+            echo "CPANEL_SSH_KEY secret is required" >&2
+            exit 1
+          fi
+          install -m 700 -d "$HOME/.ssh"
+          printf '%s\n' "$CPANEL_SSH_KEY" > "$HOME/.ssh/igp_deploy"
+          chmod 600 "$HOME/.ssh/igp_deploy"
+
+      - name: Prepare known hosts
+        env:
+          CPANEL_SSH_KNOWN_HOSTS: ${{ vars.CPANEL_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$CPANEL_SSH_KNOWN_HOSTS" ]]; then
+            echo "CPANEL_SSH_KNOWN_HOSTS variable is required" >&2
+            exit 1
+          fi
+          printf '%s\n' "$CPANEL_SSH_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/known_hosts"
+
+      - name: Pull and deploy on cPanel
+        env:
+          CPANEL_SSH_HOST: ${{ vars.CPANEL_SSH_HOST || 'webs20rdns02.futuresouls.com' }}
+          CPANEL_SSH_PORT: ${{ vars.CPANEL_SSH_PORT || '22' }}
+          CPANEL_SSH_USER: ${{ vars.CPANEL_SSH_USER || 'vilwjofa' }}
+          CPANEL_REPOSITORY_ROOT: ${{ vars.CPANEL_REPOSITORY_ROOT || '/home/vilwjofa/repositories/igp-acc-radiators' }}
+        run: |
+          set -euo pipefail
+          printf -v remote_root '%q' "$CPANEL_REPOSITORY_ROOT"
+          remote_cmd="cd $remote_root && git fetch --prune origin main && git reset --hard origin/main && /bin/bash ./deploy/cpanel-deploy.sh --deploy"
+          ssh \
+            -i "$HOME/.ssh/igp_deploy" \
+            -p "$CPANEL_SSH_PORT" \
+            -o BatchMode=yes \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            "$CPANEL_SSH_USER@$CPANEL_SSH_HOST" \
+            "$remote_cmd"

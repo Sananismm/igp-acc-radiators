@@ -2,6 +2,22 @@
 
 **Do not deploy this branch to production yet.** Critical implementation and verification remain in REMAINING_ACTIONS.md. The steps below describe a plan to rehearse in a separate staging account, not a verified production procedure.
 
+## Configured cPanel deployment
+
+The repository now contains `.cpanel.yml`, `deploy/cpanel-deploy.sh`, `deploy/cpanel.config` and a gated `.github/workflows/deployment.yml`. cPanel runs the shell script from the repository root. The script copies only the root theme files plus `assets/`, `inc/` and `template-parts/` into `wp-content/themes/igp-unified/`, and only `igp-core/` into `wp-content/plugins/igp-core/`. It never writes to the database, `wp-config.php`, `.htaccess`, `wp-content/uploads/`, WordPress core or unrelated themes and plugins. Git metadata, `tools/`, `release/`, reports and archives are not copied.
+
+Verification performed from outside the hosting account:
+
+- `webs20rdns02.futuresouls.com` resolves to `65.108.198.248`; TCP/22 was refused from the local network and SSH batch login failed.
+- `igp.com.pk` serves a static Bootstrap HTML site at the web root, not WordPress: `/wp-login.php`, `/wp-admin/`, `/wp-includes/version.php`, `/wp-json/` and both package paths returned 404.
+- The production document root and installed theme/plugin directory names therefore remain unverified. `deploy/cpanel.config` uses the conventional cPanel root `/home/vilwjofa/public_html` and the expected release slugs, but `IGP_ROOT_VERIFIED=false`.
+
+All three safety gates in `deploy/cpanel.config` are false: `IGP_ROOT_VERIFIED`, `IGP_DATABASE_BACKUP_CONFIRMED` and `IGP_RELEASE_APPROVED`. `--check` validates structure only; `--preflight` checks the live WordPress paths; `--deploy` refuses to run until all three gates are true and the script is running from `/home/vilwjofa/repositories/igp-acc-radiators`. Before enabling deployment, confirm the real document root and installed directory names in cPanel, complete a restore drill, resolve REMAINING_ACTIONS.md and obtain explicit release approval. Then set the three values to `true` in a reviewed commit.
+
+The deployment script stages files outside the document root, runs PHP syntax checks, backs up both existing target directories plus `wp-config.php` and `.htaccess`, exports the database when WP-CLI is available, swaps each target directory and rolls both back on any error. Backups are named under `/home/vilwjofa/igp-deploy-backups/`. A code rollback does not revert database changes; follow `release/ROLLBACK_GUIDE.md` for data restoration.
+
+GitHub Actions validates every push to `main`. Automated deployment stays off until repository variable `IGP_CICD_ENABLED=true`. It also requires SSH secrets/variables `CPANEL_SSH_KEY`, `CPANEL_SSH_KNOWN_HOSTS`, `CPANEL_SSH_HOST`, `CPANEL_SSH_PORT`, `CPANEL_SSH_USER` and `CPANEL_REPOSITORY_ROOT`. Port 22 is currently unavailable, so this path must be tested before enabling it.
+
 1. Confirm hosting supports a supported WordPress version, PHP 8.1 or newer (the code uses `str_starts_with`), MySQL/MariaDB, HTTPS, WordPress-required PHP extensions and sufficient upload and database limits. Exact supported version combinations have not been tested. Confirm cost before provisioning.
 2. In cPanel, use the host's WordPress installer/WP Toolkit if available, or follow the [cPanel WordPress installation guide](https://docs.cpanel.net/knowledge-base/third-party/how-to-install-wordpress-with-cpanel/104/). Create a dedicated staging database and least-privilege database user using cPanel's database tools. Store credentials securely in the staging `wp-config.php`; never put them in Git or chat.
 3. Restrict staging access and indexing. Back up existing files, database, configuration and any private files before touching an existing installation; practice restoring them to a separate environment.

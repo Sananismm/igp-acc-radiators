@@ -8,3 +8,4 @@
 6. Obtain company-approved legal policies, business address/hours, image rights and decisions on retention, notifications and data ownership.
 7. Run full public/admin, accessibility, responsive, security, backup/restore and performance tests on a real cPanel WordPress/MySQL staging environment.
 8. Do not merge or deploy until reviewed and separately authorized. No production secrets should be put in Git or chat.
+9. Confirm the real cPanel document root and installed theme/plugin directory names, enable and test a restricted SSH path, verify a database restore, and then explicitly flip the three `deploy/cpanel.config` safety gates before enabling `IGP_CICD_ENABLED`.
